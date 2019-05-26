@@ -1,24 +1,26 @@
 import {Driver} from "../Driver";
-import {ConnectionIsNotSetError} from "../../error/ConnectionIsNotSetError";
+// import {ConnectionIsNotSetError} from "../../error/ConnectionIsNotSetError";
 import {ObjectLiteral} from "../../common/ObjectLiteral";
 import {DriverPackageNotInstalledError} from "../../error/DriverPackageNotInstalledError";
-import {DriverUtils} from "../DriverUtils";
+// import {DriverUtils} from "../DriverUtils";
 import {ColumnMetadata} from "../../metadata/ColumnMetadata";
 import {PostgresQueryRunner} from "./PostgresQueryRunner";
 import {DateUtils} from "../../util/DateUtils";
 import {PlatformTools} from "../../platform/PlatformTools";
 import {Connection} from "../../connection/Connection";
-import {RdbmsSchemaBuilder} from "../../schema-builder/RdbmsSchemaBuilder";
+// import {RdbmsSchemaBuilder} from "../../schema-builder/RdbmsSchemaBuilder";
 import {PostgresConnectionOptions} from "./PostgresConnectionOptions";
 import {MappedColumnTypes} from "../types/MappedColumnTypes";
 import {ColumnType} from "../types/ColumnTypes";
 import {QueryRunner} from "../../query-runner/QueryRunner";
 import {DataTypeDefaults} from "../types/DataTypeDefaults";
 import {TableColumn} from "../../schema-builder/table/TableColumn";
-import {PostgresConnectionCredentialsOptions} from "./PostgresConnectionCredentialsOptions";
+// import {PostgresConnectionCredentialsOptions} from "./PostgresConnectionCredentialsOptions";
 import {EntityMetadata} from "../../metadata/EntityMetadata";
 import {OrmUtils} from "../../util/OrmUtils";
 import {ApplyValueTransformers} from "../../util/ApplyValueTransformers";
+
+import * as jsforce from 'jsforce'
 
 /**
  * Organizes communication with PostgreSQL DBMS.
@@ -37,7 +39,8 @@ export class PostgresDriver implements Driver {
     /**
      * Postgres underlying library.
      */
-    postgres: any;
+    // postgres: any;
+    conn: jsforce.Connection;
 
     /**
      * Pool for master database.
@@ -274,18 +277,19 @@ export class PostgresDriver implements Driver {
      * either create a pool and create connection when needed.
      */
     async connect(): Promise<void> {
+        await this.conn.login('jm@voice.demo2', 'test1234')
 
-        if (this.options.replication) {
-            this.slaves = await Promise.all(this.options.replication.slaves.map(slave => {
-                return this.createPool(this.options, slave);
-            }));
-            this.master = await this.createPool(this.options, this.options.replication.master);
-            this.database = this.options.replication.master.database;
+        // if (this.options.replication) {
+        //     this.slaves = await Promise.all(this.options.replication.slaves.map(slave => {
+        //         return this.createPool(this.options, slave);
+        //     }));
+        //     this.master = await this.createPool(this.options, this.options.replication.master);
+        //     this.database = this.options.replication.master.database;
 
-        } else {
-            this.master = await this.createPool(this.options, this.options);
-            this.database = this.options.database;
-        }
+        // } else {
+        //     this.master = await this.createPool(this.options, this.options);
+        //     this.database = this.options.database;
+        // }
     }
 
     /**
@@ -358,20 +362,25 @@ export class PostgresDriver implements Driver {
      * Closes connection with database.
      */
     async disconnect(): Promise<void> {
-        if (!this.master)
-            return Promise.reject(new ConnectionIsNotSetError("postgres"));
+        // if (!this.master)
+        //     return Promise.reject(new ConnectionIsNotSetError("postgres"));
 
-        await this.closePool(this.master);
-        await Promise.all(this.slaves.map(slave => this.closePool(slave)));
-        this.master = undefined;
-        this.slaves = [];
+        // await this.closePool(this.master);
+        // await Promise.all(this.slaves.map(slave => this.closePool(slave)));
+        // this.master = undefined;
+        // this.slaves = [];
+        this.conn.logout()
     }
 
     /**
      * Creates a schema builder used to build and sync a schema.
      */
-    createSchemaBuilder() {
-        return new RdbmsSchemaBuilder(this.connection);
+    createSchemaBuilder(): any {
+        // return new RdbmsSchemaBuilder(this.connection);
+        return {
+            build: () => {},
+            log: () => {}
+        }
     }
 
     /**
@@ -543,7 +552,8 @@ export class PostgresDriver implements Driver {
      * Escapes a column name.
      */
     escape(columnName: string): string {
-        return "\"" + columnName + "\"";
+        // return "\"" + columnName + "\"";
+        return columnName;
     }
 
     /**
@@ -717,11 +727,15 @@ export class PostgresDriver implements Driver {
      * If replication is not setup then returns default connection's database connection.
      */
     obtainMasterConnection(): Promise<any> {
-        return new Promise((ok, fail) => {
-            this.master.connect((err: any, connection: any, release: any) => {
-                err ? fail(err) : ok([connection, release]);
-            });
-        });
+        // return new Promise((ok, fail) => {
+        //     this.master.connect((err: any, connection: any, release: any) => {
+        //         err ? fail(err) : ok([connection, release]);
+        //     });
+        // });
+
+        // throw new Error('Not implemented')
+        // console.log('testing', 'this.conn', this.conn);
+        return Promise.resolve([this.conn, () => {}]);
     }
 
     /**
@@ -730,15 +744,16 @@ export class PostgresDriver implements Driver {
      * If replication is not setup then returns master (default) connection's database connection.
      */
     obtainSlaveConnection(): Promise<any> {
-        if (!this.slaves.length)
-            return this.obtainMasterConnection();
+        // if (!this.slaves.length)
+        //     return this.obtainMasterConnection();
 
-        return new Promise((ok, fail) => {
-            const random = Math.floor(Math.random() * this.slaves.length);
-            this.slaves[random].connect((err: any, connection: any, release: any) => {
-                err ? fail(err) : ok([connection, release]);
-            });
-        });
+        // return new Promise((ok, fail) => {
+        //     const random = Math.floor(Math.random() * this.slaves.length);
+        //     this.slaves[random].connect((err: any, connection: any, release: any) => {
+        //         err ? fail(err) : ok([connection, release]);
+        //     });
+        // });
+        throw new Error('Not implemented')
     }
 
     /**
@@ -846,62 +861,63 @@ export class PostgresDriver implements Driver {
      */
     protected loadDependencies(): void {
         try {
-            this.postgres = PlatformTools.load("pg");
-            try {
-                const pgNative = PlatformTools.load("pg-native");
-                if (pgNative && this.postgres.native) this.postgres = this.postgres.native;
+            // this.postgres = PlatformTools.load("pg");
+            this.conn = new jsforce.Connection({});
+            // try {
+            //     const pgNative = PlatformTools.load("pg-native");
+            //     if (pgNative && this.postgres.native) this.postgres = this.postgres.native;
 
-            } catch (e) { }
+            // } catch (e) { }
 
         } catch (e) { // todo: better error for browser env
             throw new DriverPackageNotInstalledError("Postgres", "pg");
         }
     }
 
-    /**
-     * Creates a new connection pool for a given database credentials.
-     */
-    protected async createPool(options: PostgresConnectionOptions, credentials: PostgresConnectionCredentialsOptions): Promise<any> {
+    // /**
+    //  * Creates a new connection pool for a given database credentials.
+    //  */
+    // protected async createPool(options: PostgresConnectionOptions, credentials: PostgresConnectionCredentialsOptions): Promise<any> {
 
-        credentials = Object.assign(credentials, DriverUtils.buildDriverOptions(credentials)); // todo: do it better way
+    //     credentials = Object.assign(credentials, DriverUtils.buildDriverOptions(credentials)); // todo: do it better way
 
-        // build connection options for the driver
-        const connectionOptions = Object.assign({}, {
-            host: credentials.host,
-            user: credentials.username,
-            password: credentials.password,
-            database: credentials.database,
-            port: credentials.port,
-            ssl: credentials.ssl
-        }, options.extra || {});
+    //     // build connection options for the driver
+    //     const connectionOptions = Object.assign({}, {
+    //         host: credentials.host,
+    //         user: credentials.username,
+    //         password: credentials.password,
+    //         database: credentials.database,
+    //         port: credentials.port,
+    //         ssl: credentials.ssl
+    //     }, options.extra || {});
 
-        // create a connection pool
-        const pool = new this.postgres.Pool(connectionOptions);
-        const { logger } = this.connection;
-        /*
-          Attaching an error handler to pool errors is essential, as, otherwise, errors raised will go unhandled and
-          cause the hosting app to crash.
-         */
-        pool.on("error", (error: any) => logger.log("warn", `Postgres pool raised an error. ${error}`));
+    //     // create a connection pool
+    //     const pool = new this.postgres.Pool(connectionOptions);
+    //     const { logger } = this.connection;
+    //     /*
+    //       Attaching an error handler to pool errors is essential, as, otherwise, errors raised will go unhandled and
+    //       cause the hosting app to crash.
+    //      */
+    //     pool.on("error", (error: any) => logger.log("warn", `Postgres pool raised an error. ${error}`));
 
-        return new Promise((ok, fail) => {
-            pool.connect((err: any, connection: any, release: Function) => {
-                if (err) return fail(err);
-                release();
-                ok(pool);
-            });
-        });
-    }
+    //     return new Promise((ok, fail) => {
+    //         pool.connect((err: any, connection: any, release: Function) => {
+    //             if (err) return fail(err);
+    //             release();
+    //             ok(pool);
+    //         });
+    //     });
+    // }
 
-    /**
-     * Closes connection pool.
-     */
-    protected async closePool(pool: any): Promise<void> {
-        await Promise.all(this.connectedQueryRunners.map(queryRunner => queryRunner.release()));
-        return new Promise<void>((ok, fail) => {
-            pool.end((err: any) => err ? fail(err) : ok());
-        });
-    }
+    // /**
+    //  * Closes connection pool.
+    //  */
+    // protected async closePool(pool: any): Promise<void> {
+    //     await Promise.all(this.connectedQueryRunners.map(queryRunner => queryRunner.release()));
+    //     return new Promise<void>((ok, fail) => {
+    //         pool.end((err: any) => err ? fail(err) : ok());
+    //     });
+    // }
 
     /**
      * Executes given query.

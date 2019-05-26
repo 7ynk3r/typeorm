@@ -82,11 +82,13 @@ export abstract class QueryBuilder<Entity> {
      */
     constructor(connectionOrQueryBuilder: Connection|QueryBuilder<any>, queryRunner?: QueryRunner) {
         if (connectionOrQueryBuilder instanceof QueryBuilder) {
+            console.log('testing', '3', 3);
             this.connection = connectionOrQueryBuilder.connection;
             this.queryRunner = connectionOrQueryBuilder.queryRunner;
             this.expressionMap = connectionOrQueryBuilder.expressionMap.clone();
 
         } else {
+            console.log('testing', '2', 2);
             this.connection = connectionOrQueryBuilder;
             this.queryRunner = queryRunner;
             this.expressionMap = new QueryExpressionMap(this.connection);

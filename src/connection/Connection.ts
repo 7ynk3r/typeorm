@@ -411,12 +411,18 @@ export class Connection {
             throw new Error(`Query Builder is not supported by MongoDB.`);
 
         if (alias) {
+            console.log('testing', '7', 7);
+            console.log('testing', 'alias', alias);
             const metadata = this.getMetadata(entityOrRunner as Function|EntitySchema<Entity>|string);
+            // console.log('testing', 'metadata', metadata);
+
             return new SelectQueryBuilder(this, queryRunner)
                 .select(alias)
                 .from(metadata.target, alias);
+                
 
         } else {
+            console.log('testing', '8', 8);
             return new SelectQueryBuilder(this, entityOrRunner as QueryRunner|undefined);
         }
     }

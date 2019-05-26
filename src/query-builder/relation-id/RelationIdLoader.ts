@@ -21,6 +21,7 @@ export class RelationIdLoader {
     // -------------------------------------------------------------------------
 
     async load(rawEntities: any[]): Promise<RelationIdLoadResult[]> {
+        console.log('testing', 'this.relationIdAttributes', this.relationIdAttributes);
 
         const promises = this.relationIdAttributes.map(async relationIdAttr => {
 

@@ -1,17 +1,13 @@
-import { PrimaryGeneratedColumn, Entity, Column } from "../../../../src";
+import { Entity, PrimaryColumn, Column } from "../../../../src";
 
 @Entity()
-export class Post {
-
-    @PrimaryGeneratedColumn()
-    id: number;
+export class Account {
+    @PrimaryColumn()
+    Id: string;
 
     @Column()
-    title: string;
+    Name?: string;
 
-    @Column({
-        type: "json"
-    })
-    meta: any;
-
+    @Column()
+    LastActivityDate?: Date;
 }
