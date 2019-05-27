@@ -276,8 +276,9 @@ export class PostgresDriver implements Driver {
      * Based on pooling options, it can either create connection immediately,
      * either create a pool and create connection when needed.
      */
-    async connect(): Promise<void> {
-        await this.conn.login('jm@voice.demo2', 'test1234')
+    async connect(): Promise<void> {        
+        await this.conn.login(this.options.username || '', this.options.password || '')
+
 
         // if (this.options.replication) {
         //     this.slaves = await Promise.all(this.options.replication.slaves.map(slave => {
@@ -862,7 +863,9 @@ export class PostgresDriver implements Driver {
     protected loadDependencies(): void {
         try {
             // this.postgres = PlatformTools.load("pg");
-            this.conn = new jsforce.Connection({});
+            this.conn = new jsforce.Connection({
+                loginUrl: `${this.options.schema || 'https'}://${this.options.host}`
+            });
             // try {
             //     const pgNative = PlatformTools.load("pg-native");
             //     if (pgNative && this.postgres.native) this.postgres = this.postgres.native;
