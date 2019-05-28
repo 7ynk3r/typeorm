@@ -1,5 +1,5 @@
 import { Driver } from "./Driver";
-import { shorten } from "../util/StringUtils";
+// import { shorten } from "../util/StringUtils";
 
     /**
  * Common driver utility functions.
@@ -46,14 +46,16 @@ export class DriverUtils {
      * @return An alias allowing to select/transform the target `column`.
      */
     static buildColumnAlias({ maxAliasLength }: Driver, alias: string, column: string): string {
-        const columnAliasName = alias + "_" + column;
+        return column;
+        
+        // const columnAliasName = alias + "_" + column;
 
-        if (maxAliasLength && maxAliasLength > 0 && columnAliasName.length > maxAliasLength)
-            return alias.length > column.length
-                ? `${shorten(alias)}_${column}`
-                : `${alias}_${shorten(column)}`;
+        // if (maxAliasLength && maxAliasLength > 0 && columnAliasName.length > maxAliasLength)
+        //     return alias.length > column.length
+        //         ? `${shorten(alias)}_${column}`
+        //         : `${alias}_${shorten(column)}`;
 
-        return columnAliasName;
+        // return columnAliasName;
     }
 
     // -------------------------------------------------------------------------

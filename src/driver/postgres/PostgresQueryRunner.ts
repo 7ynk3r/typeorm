@@ -1,8 +1,8 @@
 import {PromiseUtils} from "../../";
 import {ObjectLiteral} from "../../common/ObjectLiteral";
-import {QueryFailedError} from "../../error/QueryFailedError";
+// import {QueryFailedError} from "../../error/QueryFailedError";
 import {QueryRunnerAlreadyReleasedError} from "../../error/QueryRunnerAlreadyReleasedError";
-import {TransactionAlreadyStartedError} from "../../error/TransactionAlreadyStartedError";
+// import {TransactionAlreadyStartedError} from "../../error/TransactionAlreadyStartedError";
 import {TransactionNotStartedError} from "../../error/TransactionNotStartedError";
 import {ColumnType} from "../../index";
 import {ReadStream} from "../../platform/PlatformTools";
@@ -22,6 +22,8 @@ import {OrmUtils} from "../../util/OrmUtils";
 import {Query} from "../Query";
 import {IsolationLevel} from "../types/IsolationLevel";
 import {PostgresDriver} from "./PostgresDriver";
+
+import * as jsforce from 'jsforce'
 
 /**
  * Runs queries on a single postgres database connection.
@@ -117,14 +119,14 @@ export class PostgresQueryRunner extends BaseQueryRunner implements QueryRunner 
      * Starts transaction.
      */
     async startTransaction(isolationLevel?: IsolationLevel): Promise<void> {
-        if (this.isTransactionActive)
-            throw new TransactionAlreadyStartedError();
+        // if (this.isTransactionActive)
+        //     throw new TransactionAlreadyStartedError();
 
-        this.isTransactionActive = true;
-        await this.query("START TRANSACTION");
-        if (isolationLevel) {
-            await this.query("SET TRANSACTION ISOLATION LEVEL " + isolationLevel);
-        }
+        // this.isTransactionActive = true;
+        // await this.query("START TRANSACTION");
+        // if (isolationLevel) {
+        //     await this.query("SET TRANSACTION ISOLATION LEVEL " + isolationLevel);
+        // }
     }
 
     /**
@@ -154,44 +156,61 @@ export class PostgresQueryRunner extends BaseQueryRunner implements QueryRunner 
     /**
      * Executes a given SQL query.
      */
-    query(query: string, parameters?: any[]): Promise<any> {
+    async query(query: string, parameters?: any[]): Promise<any> {
+        console.log('testing', 'query', query);
         if (this.isReleased)
             throw new QueryRunnerAlreadyReleasedError();
 
-        return new Promise<any[]>(async (ok, fail) => {
-            try {
-                const databaseConnection = await this.connect();
-                this.driver.connection.logger.logQuery(query, parameters, this);
-                const queryStartTime = +new Date();
 
-                databaseConnection.query(query, parameters, (err: any, result: any) => {
+        const databaseConnection: jsforce.Connection = await this.connect();
+        this.driver.connection.logger.logQuery(query, parameters, this);
 
-                    // log slow queries if maxQueryExecution time is set
-                    const maxQueryExecutionTime = this.driver.connection.options.maxQueryExecutionTime;
-                    const queryEndTime = +new Date();
-                    const queryExecutionTime = queryEndTime - queryStartTime;
-                    if (maxQueryExecutionTime && queryExecutionTime > maxQueryExecutionTime)
-                        this.driver.connection.logger.logQuerySlow(queryExecutionTime, query, parameters, this);
+        // const queryStartTime = +new Date();
+        const data = await databaseConnection.query(query);
+        // console.log('testing', 'data', data);
+        
+        return data.records;
 
-                    if (err) {
-                        this.driver.connection.logger.logQueryError(err, query, parameters, this);
-                        fail(new QueryFailedError(query, parameters, err));
-                    } else {
-                        switch (result.command) {
-                            case "DELETE":
-                                // for DELETE query additionally return number of affected rows
-                                ok([result.rows, result.rowCount]);
-                                break;
-                            default:
-                                ok(result.rows);
-                        }
-                    }
-                });
 
-            } catch (err) {
-                fail(err);
-            }
-        });
+        // return new Promise<any[]>(async (ok, fail) => {
+        //     try {
+        //         const databaseConnection: jsforce.Connection = await this.connect();
+        //         this.driver.connection.logger.logQuery(query, parameters, this);
+                
+        //         // const queryStartTime = +new Date();
+        //         const data = await databaseConnection.query(query);
+        //         console.log('testing', 'data', data);
+        //         return data.records;
+                
+
+        //         // databaseConnection.query(query, parameters, (err: any, result: any) => {
+
+        //         //     // log slow queries if maxQueryExecution time is set
+        //         //     const maxQueryExecutionTime = this.driver.connection.options.maxQueryExecutionTime;
+        //         //     const queryEndTime = +new Date();
+        //         //     const queryExecutionTime = queryEndTime - queryStartTime;
+        //         //     if (maxQueryExecutionTime && queryExecutionTime > maxQueryExecutionTime)
+        //         //         this.driver.connection.logger.logQuerySlow(queryExecutionTime, query, parameters, this);
+
+        //         //     if (err) {
+        //         //         this.driver.connection.logger.logQueryError(err, query, parameters, this);
+        //         //         fail(new QueryFailedError(query, parameters, err));
+        //         //     } else {
+        //         //         switch (result.command) {
+        //         //             case "DELETE":
+        //         //                 // for DELETE query additionally return number of affected rows
+        //         //                 ok([result.rows, result.rowCount]);
+        //         //                 break;
+        //         //             default:
+        //         //                 ok(result.rows);
+        //         //         }
+        //         //     }
+        //         // });
+
+        //     } catch (err) {
+        //         fail(err);
+        //     }
+        // });
     }
 
     /**
@@ -1260,48 +1279,48 @@ export class PostgresQueryRunner extends BaseQueryRunner implements QueryRunner 
      * Note: this operation uses SQL's TRUNCATE query which cannot be reverted in transactions.
      */
     async clearTable(tableName: string): Promise<void> {
-        await this.query(`TRUNCATE TABLE ${this.escapePath(tableName)}`);
+        // await this.query(`TRUNCATE TABLE ${this.escapePath(tableName)}`);
     }
 
     /**
      * Removes all tables from the currently connected database.
      */
     async clearDatabase(): Promise<void> {
-        const schemas: string[] = [];
-        this.connection.entityMetadatas
-            .filter(metadata => metadata.schema)
-            .forEach(metadata => {
-                const isSchemaExist = !!schemas.find(schema => schema === metadata.schema);
-                if (!isSchemaExist)
-                    schemas.push(metadata.schema!);
-            });
-        schemas.push(this.driver.options.schema || "current_schema()");
-        const schemaNamesString = schemas.map(name => {
-            return name === "current_schema()" ? name : "'" + name + "'";
-        }).join(", ");
+        // const schemas: string[] = [];
+        // this.connection.entityMetadatas
+        //     .filter(metadata => metadata.schema)
+        //     .forEach(metadata => {
+        //         const isSchemaExist = !!schemas.find(schema => schema === metadata.schema);
+        //         if (!isSchemaExist)
+        //             schemas.push(metadata.schema!);
+        //     });
+        // schemas.push(this.driver.options.schema || "current_schema()");
+        // const schemaNamesString = schemas.map(name => {
+        //     return name === "current_schema()" ? name : "'" + name + "'";
+        // }).join(", ");
 
-        await this.startTransaction();
-        try {
-            const selectViewDropsQuery = `SELECT 'DROP VIEW IF EXISTS "' || schemaname || '"."' || viewname || '" CASCADE;' as "query" ` +
-             `FROM "pg_views" WHERE "schemaname" IN (${schemaNamesString}) AND "viewname" NOT IN ('geography_columns', 'geometry_columns', 'raster_columns', 'raster_overviews')`;
-            const dropViewQueries: ObjectLiteral[] = await this.query(selectViewDropsQuery);
-            await Promise.all(dropViewQueries.map(q => this.query(q["query"])));
+        // await this.startTransaction();
+        // try {
+        //     const selectViewDropsQuery = `SELECT 'DROP VIEW IF EXISTS "' || schemaname || '"."' || viewname || '" CASCADE;' as "query" ` +
+        //      `FROM "pg_views" WHERE "schemaname" IN (${schemaNamesString}) AND "viewname" NOT IN ('geography_columns', 'geometry_columns', 'raster_columns', 'raster_overviews')`;
+        //     const dropViewQueries: ObjectLiteral[] = await this.query(selectViewDropsQuery);
+        //     await Promise.all(dropViewQueries.map(q => this.query(q["query"])));
 
-            // ignore spatial_ref_sys; it's a special table supporting PostGIS
-            // TODO generalize this as this.driver.ignoreTables
-            const selectTableDropsQuery = `SELECT 'DROP TABLE IF EXISTS "' || schemaname || '"."' || tablename || '" CASCADE;' as "query" FROM "pg_tables" WHERE "schemaname" IN (${schemaNamesString}) AND "tablename" NOT IN ('spatial_ref_sys')`;
-            const dropTableQueries: ObjectLiteral[] = await this.query(selectTableDropsQuery);
-            await Promise.all(dropTableQueries.map(q => this.query(q["query"])));
-            await this.dropEnumTypes(schemaNamesString);
+        //     // ignore spatial_ref_sys; it's a special table supporting PostGIS
+        //     // TODO generalize this as this.driver.ignoreTables
+        //     const selectTableDropsQuery = `SELECT 'DROP TABLE IF EXISTS "' || schemaname || '"."' || tablename || '" CASCADE;' as "query" FROM "pg_tables" WHERE "schemaname" IN (${schemaNamesString}) AND "tablename" NOT IN ('spatial_ref_sys')`;
+        //     const dropTableQueries: ObjectLiteral[] = await this.query(selectTableDropsQuery);
+        //     await Promise.all(dropTableQueries.map(q => this.query(q["query"])));
+        //     await this.dropEnumTypes(schemaNamesString);
 
-            await this.commitTransaction();
+        //     await this.commitTransaction();
 
-        } catch (error) {
-            try { // we throw original error even if rollback thrown an error
-                await this.rollbackTransaction();
-            } catch (rollbackError) { }
-            throw error;
-        }
+        // } catch (error) {
+        //     try { // we throw original error even if rollback thrown an error
+        //         await this.rollbackTransaction();
+        //     } catch (rollbackError) { }
+        //     throw error;
+        // }
     }
 
     // -------------------------------------------------------------------------

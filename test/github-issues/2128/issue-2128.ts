@@ -2,60 +2,41 @@ import "reflect-metadata";
 import { closeTestingConnections, createTestingConnections, reloadTestingDatabases } from "../../utils/test-utils";
 import { Connection } from "../../../src/connection/Connection";
 import { expect } from "chai";
-import { Post } from "./entity/Post";
-import { PostgresDriver } from "../../../src/driver/postgres/PostgresDriver";
+import { Opportunity, TypeEnum } from "./entity/Post";
+// import { PostgresDriver } from "../../../src/driver/postgres/PostgresDriver";
 
-describe("github issues > #2128 skip preparePersistentValue for value functions", () => {
+describe("github issues > #2128 salesfoce", () => {
 
     let connections: Connection[];
     before(async () => connections = await createTestingConnections({
         entities: [__dirname + "/entity/*{.js,.ts}"],
-        enabledDrivers: ["postgres", "mysql"],
+        enabledDrivers: ["postgres"],
     }));
     beforeEach(() => reloadTestingDatabases(connections));
     after(() => closeTestingConnections(connections));
 
-    it("should be able to resolve value functions", () => Promise.all(connections.map(async connection => {
 
-        await connection.createQueryBuilder()
-            .insert()
-            .into(Post)
-            .values({
-                title: "First Post",
-                meta: {
-                    keywords: [
-                        "important",
-                        "fresh"
-                    ]
-                }
-            })
-            .execute();
+    it("opportunity", () => Promise.all(connections.map(async connection => {
+        const Repository = connection.manager.getRepository(Opportunity);
 
-        const metaAddition = JSON.stringify({
-            author: "John Doe"
-        });
+        const opps = await Repository.find({ take: 10, skip: 2 })
+        expect(opps.length).to.be.greaterThan(0, 'we got users!')
 
-        await connection.createQueryBuilder()
-            .update(Post)
-            .set({
-                meta: () => connection.driver instanceof PostgresDriver
-                    ? `'${metaAddition}'::JSONB || meta::JSONB`
-                    : `JSON_MERGE('${metaAddition}', meta)`
-            })
-            .where("title = :title", {
-                title: "First Post"
-            })
-            .execute();
+        const count = await Repository.createQueryBuilder().getCount()
+        expect(count).to.be.equal(51, 'right count!')
 
-        const loadedPost = await connection.getRepository(Post).findOne({ title: "First Post" });
+        console.log('testing', 'accounts', opps);
 
-        expect(loadedPost!.meta).to.deep.equal({
-             author: "John Doe",
-             keywords: [
-                 "important",
-                 "fresh"
-            ]
-        });
+        const x = {
+            enum0: TypeEnum.Existing_Business,
+            enum1: TypeEnum.New_Business,
+        }
+        console.log('testing', 'x', x);
+
+        const y = opps.filter(o => o.Type === TypeEnum.New_Business)
+        console.log('testing', 'y', y);
+        const z = opps.filter(o => o.Type === TypeEnum.Existing_Business)
+        console.log('testing', 'z', z);
 
     })));
 

@@ -1400,7 +1400,8 @@ export class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements 
 
                 return this.getTableName(alias.tablePath!) + " " + this.escape(alias.name);
             });
-        const selection = allSelects.map(select => select.selection + (select.aliasName ? " AS " + this.escape(select.aliasName) : "")).join(", ");
+        const selection = allSelects.map(select => select.selection).join(", ");
+        // console.log('testing', 'froms', froms);
         return "SELECT " + selection + " FROM " + froms.join(", ") + lock;
     }
 
@@ -1722,10 +1723,10 @@ export class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements 
             }
 
         } else {
-            countSql = `COUNT(DISTINCT(` + metadata.primaryColumns.map((primaryColumn, index) => {
+            countSql = `COUNT(` + metadata.primaryColumns.map((primaryColumn, index) => {
                 const propertyName = this.escape(primaryColumn.databaseName);
                 return `${distinctAlias}.${propertyName}`;
-            }).join(", ") + ")) as \"cnt\"";
+            }).join(", ") + ") cnt";
         }
 
         const results = await this.clone()
@@ -1761,6 +1762,9 @@ export class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements 
             if (!metadata.versionColumn && !metadata.updateDateColumn)
                 throw new NoVersionOrUpdateDateColumnError(metadata.name);
         }
+
+        // console.log('testing', 'this.expressionMap', this.expressionMap);
+        console.log('testing', 'this.expressionMap.relationIdAttributes', this.expressionMap.relationIdAttributes);
 
         const relationIdLoader = new RelationIdLoader(this.connection, queryRunner, this.expressionMap.relationIdAttributes);
         const relationCountLoader = new RelationCountLoader(this.connection, queryRunner, this.expressionMap.relationCountAttributes);
@@ -1838,8 +1842,11 @@ export class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements 
 
             // transform raw results into entities
             const rawRelationIdResults = await relationIdLoader.load(rawResults);
+            console.log('testing', 'rawRelationIdResults', rawRelationIdResults);
             const rawRelationCountResults = await relationCountLoader.load(rawResults);
             const transformer = new RawSqlResultsToEntityTransformer(this.expressionMap, this.connection.driver, rawRelationIdResults, rawRelationCountResults, this.queryRunner);
+            
+            // console.log('testing', 'transformer', transformer);
             entities = transformer.transform(rawResults, this.expressionMap.mainAlias!);
 
             // broadcast all "after load" events
